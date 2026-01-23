@@ -105,106 +105,15 @@ def print_timing():
 # ─────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="SecurePrompt — LLM Pentesting Tool")
+    parser = argparse.ArgumentParser(description="PromptXploit — LLM Pentesting Tool")
     parser.add_argument("--target", required=True, help="Path to target module")
     parser.add_argument("--attacks", default="attacks", help="Path to attacks directory")
     parser.add_argument("--output", required=True, help="Output JSON file")
-    parser.add_argument(
-        "--mode",
-        choices=["static", "adaptive"],
-        default="static",
-        help="Attack mode: static (use attacks as-is) or adaptive (evolve attacks)"
-    )
-    parser.add_argument(
-        "--adaptive-model",
-        default=r"E:\SecurePrompt\models\mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-        help="Path to mini SLM for adaptive mode (local)"
-    )
-    parser.add_argument(
-        "--adaptive-api",
-        default=None,
-        help="API key for adaptive mode (OpenAI/Claude). If provided, uses API instead of local LLM."
-    )
-    parser.add_argument(
-        "--adaptive-provider",
-        choices=["openai", "claude"],
-        default="openai",
-        help="API provider for adaptive mode (requires --adaptive-api)"
-    )
-    parser.add_argument(
-        "--max-iterations",
-        type=int,
-        default=3,
-        help="Max iterations for adaptive mode"
-    )
-    parser.add_argument(
-        "--adaptive-strategy",
-        choices=["mutation", "recon"],
-        default="mutation",
-        help="Adaptive strategy: mutation (evolve attacks) or recon (intelligence-based)"
-    )
-    parser.add_argument(
-        "--probe-diversity",
-        type=int,
-        default=3,
-        help="Number of diverse probe attacks for recon mode (default: 3)"
-    )
+    
     args = parser.parse_args()
 
-    console.print(f"\n[bold cyan]SecurePrompt starting… (mode: {args.mode})[/bold cyan]\n")
+    console.print(f"\n[bold cyan]PromptXploit starting...[/bold cyan]\n")
     timing["start"] = time.perf_counter()
-
-    # Initialize adaptive engine if needed
-    adaptive_attacker = None
-    if args.mode == "adaptive":
-        # Choose API or local based on flag
-        if args.adaptive_api:
-            # Use API-based mutation engine
-            from adaptive.api_mutation_engine import APIMutationEngine
-            
-            console.print(f"[yellow]⚡ Initializing Adaptive Engine (API: {args.adaptive_provider})...[/yellow]")
-            try:
-                mutation_engine = APIMutationEngine(
-                    api_key=args.adaptive_api,
-                    provider=args.adaptive_provider,
-                    verbose=False
-                )
-            except Exception as e:
-                console.print(f"[red]✗ Failed to initialize API engine: {e}[/red]")
-                console.print("[yellow]Tip: Check your API key and provider[/yellow]")
-                sys.exit(1)
-        else:
-            # Use local LLM mutation engine
-            from adaptive.mutation_engine import MutationEngine
-            
-            console.print("[yellow]⚡ Initializing Adaptive Engine (Local LLM)...[/yellow]")
-            try:
-                mutation_engine = MutationEngine(args.adaptive_model, verbose=False)
-            except Exception as e:
-                console.print(f"[red]✗ Failed to load local model: {e}[/red]")
-                console.print("[yellow]Tip: Use --adaptive-api for API-based mode (no local LLM needed)[/yellow]")
-                sys.exit(1)
-        
-        
-        # Create adaptive attacker based on strategy
-        if args.adaptive_strategy == "recon":
-            from adaptive.intelligent_attacker import IntelligentAdaptiveAttacker
-            
-            adaptive_attacker = IntelligentAdaptiveAttacker(
-                mutation_engine=mutation_engine,
-                max_craft_attempts=args.max_iterations,
-                verbose=False
-            )
-            console.print(f"[green]✔ Adaptive engine ready (Recon strategy, {args.probe_diversity} probes)[/green]\n")
-        else:  # mutation
-            from adaptive.mutation_engine import AdaptiveAttacker
-            
-            adaptive_attacker = AdaptiveAttacker(
-                mutation_engine=mutation_engine,
-                max_iterations=args.max_iterations,
-                verbose=False
-            )
-            console.print("[green]✔ Adaptive engine ready (Mutation strategy)[/green]\n")
 
     # Load target
     with Progress(SpinnerColumn(), TextColumn("Loading target…"), console=console):
@@ -234,65 +143,28 @@ def main():
         for attack in attacks:
             progress.update(task, description=f"{attack['id']} ({attack['category']})")
 
-            # ADAPTIVE MODE - Use mutation engine
-            if args.mode == "adaptive" and adaptive_attacker:
-                result = adaptive_attacker.attack(
-                    original_attack=attack,
-                    target_func=run_target,
-                    evaluator_func=lambda p, r: apply_rules(p, r)
-                )
-                
-                # Use final iteration result
-                response = result["final_response"]
-                verdict = apply_rules(attack["prompt"], response)
-                
-                if verdict is None:
-                    # Still uncertain after adaptive attempts
-                    verdict = {
-                        "verdict": "partial",
-                        "confidence": 0.0,
-                        "severity": 0.0,
-                        "rationale": f"adaptive_uncertain_after_{result['iterations']}_iterations",
-                    }
-                
-                # Add adaptive metadata
-                attack_record = {
-                    "attack_id": attack["id"],
-                    "category": attack["category"],
-                    "verdict": verdict,
-                    "risk": compute_risk(verdict),
-                    "adaptive_metadata": {
-                        "iterations": result["iterations"],
-                        "success": result["success"],
-                        "final_payload": result["final_payload"][:100],
-                        "mutation_history": result["mutation_history"]
-                    }
+            # Run model
+            t0 = time.perf_counter()
+            response = run_target(attack["prompt"])
+            t1 = time.perf_counter()
+
+            # RULES FIRST
+            t2 = time.perf_counter()
+            verdict = apply_rules(attack["prompt"], response)
+            t3 = time.perf_counter()
+
+            if verdict is None:
+                verdict = {
+                    "verdict": "partial",
+                    "confidence": 0.0,
+                    "severity": 0.0,
+                    "rationale": "requires_judge",
                 }
-            
-            # STATIC MODE - Original behavior
-            else:
-                # Run model
-                t0 = time.perf_counter()
-                response = run_target(attack["prompt"])
-                t1 = time.perf_counter()
-
-                # RULES FIRST
-                t2 = time.perf_counter()
-                verdict = apply_rules(attack["prompt"], response)
-                t3 = time.perf_counter()
-
-                if verdict is None:
-                    verdict = {
-                        "verdict": "partial",
-                        "confidence": 0.0,
-                        "severity": 0.0,
-                        "rationale": "requires_judge",
-                    }
-                    pending.append({
-                        "id": attack["id"],
-                        "attack_prompt": attack["prompt"],
-                        "model_response": response,
-                    })
+                pending.append({
+                    "id": attack["id"],
+                    "attack_prompt": attack["prompt"],
+                    "model_response": response,
+                })
 
             # Batch judge when ready
             if len(pending) >= JUDGE_BATCH_SIZE:

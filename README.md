@@ -15,8 +15,8 @@ PromptXploit is a comprehensive security testing framework for LLM applications.
 
 **Key Features:**
 - 🎯 **147 attack vectors** across 17 categories
-- 🧠 **AI-powered adaptive mode** - Learns defenses and crafts new attacks
-- 🔍 **Intelligence-based recon** - Novel attack discovery
+- 🧠 **AI-powered judge** - Reliable OpenAI-based verdict evaluation
+- 🔍 **Batch evaluation** - 10 attacks per API call (efficient)
 - 📊 **JSON reporting** - Detailed vulnerability analysis
 - 🔌 **Framework-agnostic** - Works with any LLM
 
@@ -123,55 +123,48 @@ LLM Attack Surface
 
 ---
 
-## Usage Modes
+## Usage
 
-### Static Mode (Fast)
-
-Test with all 147 pre-built attacks:
+### Quick Test
 
 ```bash
+# Test your AI application
 python -m promptxploit.main \
-    --mode static \
-    --target my_app.py \
+    --target YOUR_TARGET.py \
     --attacks attacks/ \
     --output results.json
 ```
 
-### Adaptive Mode - Mutation
+That's it! Check `results.json` for vulnerabilities.
 
-Evolve attacks if blocked:
+### Test Any API
 
-```bash
-python -m promptxploit.main \
-    --mode adaptive \
-    --adaptive-strategy mutation \
-    --adaptive-api "YOUR_OPENAI_KEY" \
-    --max-iterations 3 \
-    --target my_app.py \
-    --attacks attacks/jailbreak \
-    --output adaptive.json
+```python
+# Edit targets/http_api_target.py
+target = HTTPTarget(
+    url="https://your-api.com/chat",
+    headers={"Authorization": "Bearer YOUR_TOKEN"},
+    payload_template={"message": "{PAYLOAD}"},
+    response_field="response",
+    delay_seconds=2.0  # Rate limiting
+)
 ```
 
-### Adaptive Mode - Recon (Advanced) ⭐
-
-**Intelligence-based attack crafting:**
-
 ```bash
+# Test it
 python -m promptxploit.main \
-    --mode adaptive \
-    --adaptive-strategy recon \
-    --probe-diversity 10 \
-    --adaptive-api "YOUR_OPENAI_KEY" \
-    --target my_app.py \
+    --target targets/http_api_target.py \
     --attacks attacks/ \
-    --output recon.json
+    --output results.json
 ```
 
-**How recon works:**
-1. **Phase 1:** Tests diverse attacks to learn defenses
-2. **Phase 2:** AI analyzes patterns and weaknesses
-3. **Phase 3:** Crafts brand new attacks tailored to bypass defenses
-4. **Phase 4:** Validates crafted attacks
+**Works with:**
+- ✅ OpenAI ChatGPT API
+- ✅ Anthropic Claude API
+- ✅ Your custom REST APIs
+- ✅ Any HTTP endpoint with input
+
+See [API_TESTING.md](./docs/API_TESTING.md) for details.
 
 ---
 
@@ -289,8 +282,8 @@ Test again with PromptXploit → Verify 100% protection ✅
 ## Why PromptXploit?
 
 **vs. Other Tools:**
-- ✅ **Most comprehensive** - 147 attacks (others: ~20)
-- ✅ **AI-powered adaptive** - Unique recon-based intelligence
+- ✅ **Comprehensive** - 147 attacks (others: ~20)
+- ✅ **Reliable judge** - OpenAI-based verdict evaluation
 - ✅ **Framework-agnostic** - Any LLM (OpenAI, Claude, local, custom)
 - ✅ **Easy to extend** - JSON-based attacks
 - ✅ **Production-ready** - JSON reporting, CI/CD integration
