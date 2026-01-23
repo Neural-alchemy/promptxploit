@@ -26,6 +26,32 @@ class IntelligentAdaptiveAttacker:
             "weaknesses": []
         }
     
+    def attack(
+        self,
+        original_attack: Dict,
+        target_func: Callable,
+        evaluator_func: Callable
+    ) -> Dict:
+        """
+        Main entry point - NOT USED for recon mode.
+        Recon mode should be called differently, but we need this for compatibility.
+        """
+        if self.verbose:
+            print(f"[Warning] attack() method called on IntelligentAdaptiveAttacker")
+            print(f"[Warning] Use reconnaissance() and craft_attacks() instead")
+        
+        # Just run the original attack and return
+        response = target_func(original_attack[\"prompt\"])
+        
+        return {
+            \"success\": False,
+            \"iterations\": 1,
+            \"final_payload\": original_attack[\"prompt\"],
+            \"final_response\": response,
+            \"mutation_history\": []
+        }
+    
+    
     def reconnaissance(
         self,
         probe_attacks: List[Dict],
