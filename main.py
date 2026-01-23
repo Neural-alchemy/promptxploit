@@ -11,7 +11,7 @@ from pathlib import Path
 
 from attacker.loader import load_attacks
 from evaluator.rules import apply_rules
-from evaluator.judge import judge_batch
+from evaluator.openai_judge import judge_batch  # Use OpenAI judge instead of local
 from scoring.risk import compute_risk
 
 from rich.console import Console
