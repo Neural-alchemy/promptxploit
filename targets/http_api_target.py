@@ -19,7 +19,8 @@ class HTTPTarget:
         headers: Optional[Dict[str, str]] = None,
         payload_template: Optional[Dict[str, Any]] = None,
         payload_field: str = "prompt",
-        response_field: Optional[str] = None
+        response_field: Optional[str] = None,
+        delay_seconds: float = 0.0  # Rate limiting delay
     ):
         """
         Initialize HTTP target
@@ -30,10 +31,11 @@ class HTTPTarget:
             headers: HTTP headers (auth, content-type, etc.)
             payload_template: Request body template with {PAYLOAD} placeholder
             payload_field: Field name for attack payload
-            response_field: JSON path to extract response (e.g., "choices.0.message.content")
+            response_field: JSON path to extract response
+            delay_seconds: Delay between requests (for rate limiting)
         
         Example:
-            # OpenAI-style API
+            # With rate limiting (2 second delay)
             target = HTTPTarget(
                 url="https://api.openai.com/v1/chat/completions",
                 headers={"Authorization": "Bearer sk-..."},
@@ -41,14 +43,8 @@ class HTTPTarget:
                     "model": "gpt-3.5-turbo",
                     "messages": [{"role": "user", "content": "{PAYLOAD}"}]
                 },
-                response_field="choices.0.message.content"
-            )
-            
-            # Simple POST API
-            target = HTTPTarget(
-                url="https://myapi.com/chat",
-                payload_template={"message": "{PAYLOAD}"},
-                response_field="response"
+                response_field="choices.0.message.content",
+                delay_seconds=2.0  # Avoid rate limits!
             )
         """
         self.url = url
@@ -57,9 +53,16 @@ class HTTPTarget:
         self.payload_template = payload_template or {}
         self.payload_field = payload_field
         self.response_field = response_field
+        self.delay_seconds = delay_seconds
     
     def send(self, prompt: str) -> str:
         """Send attack payload to API"""
+        import time
+        
+        # Rate limiting
+        if self.delay_seconds > 0:
+            time.sleep(self.delay_seconds)
+        
         try:
             # Build request payload
             if self.payload_template:
