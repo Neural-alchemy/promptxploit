@@ -54,6 +54,40 @@ python -m promptxploit.main \
 
 ---
 
+## Test ANY API or URL 🌐
+
+**NEW:** You can now test any HTTP endpoint directly!
+
+### Quick API Test
+
+```python
+# Edit targets/http_api_target.py
+target = HTTPTarget(
+    url="https://your-api.com/chat",
+    headers={"Authorization": "Bearer YOUR_TOKEN"},
+    payload_template={"message": "{PAYLOAD}"},
+    response_field="response"
+)
+```
+
+```bash
+# Test it
+python -m promptxploit.main \
+    --target targets/http_api_target.py \
+    --attacks attacks/ \
+    --output api_scan.json
+```
+
+**Works with:**
+- ✅ OpenAI ChatGPT API
+- ✅ Anthropic Claude API
+- ✅ Your custom REST APIs
+- ✅ Any HTTP endpoint with input
+
+See [API_TESTING.md](./docs/API_TESTING.md) for full guide.
+
+---
+
 ## Attack Taxonomy
 
 PromptXploit tests **147 attacks** across these categories:
