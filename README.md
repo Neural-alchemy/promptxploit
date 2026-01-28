@@ -4,7 +4,7 @@
 **LLM Penetration Testing Framework** - Discover vulnerabilities before attackers do
 
 
-**This project is evolving rapidly occasional instability is expected**
+**⚠️This project is evolving rapidly occasional instability is expected**
 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
